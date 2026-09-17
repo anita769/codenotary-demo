@@ -1,7 +1,9 @@
 {
   "run_tag": "pr1-v2",
   "target": "coupon_expiry",
-  "file_map": {"src/billing/coupon.py": "coupon.py"},
+  "file_map": {
+    "src/billing/coupon.py": "coupon.py"
+  },
   "intake": {
     "title": "优惠券有效至 11 月 10 日，但没到期就核销不了",
     "report": "用户投诉集中在今天上午：券还在有效期内，结算时提示无法核销。优惠券规则：有效至 11 月 10 日。请尽快修复，大促期间影响支付核销、订单结算、退款补偿三个流程。",
@@ -11,36 +13,96 @@
   },
   "fix_hint": "",
   "steps": [
-    {"tool": "notary_change.get_issue", "role": "triage"},
-    {"tool": "notary_change.get_submitted_change", "role": "sentinel"},
-    {"tool": "notary_sentinel.scan", "role": "sentinel"},
-    {"tool": "notary_flow.triage", "role": "triage", "payload": {
-      "verdict": "accept", "scope": ["coupon.py"],
-      "route": ["rca", "contract", "tester", "gates"],
-      "rationale": "争议裁决后按契约 v1.1 重审：范围不变"}},
-    {"tool": "notary_flow.diagnosis", "role": "rca", "payload": {
-      "root_cause": "v1 修复将有效期边界误译为 UTC 日界；裁决确认业务口径为业务所在地自然日含当天",
-      "evidence": ["run pr1-v1 失败测试 test_valid_on_last_business_day_evening",
-                   "裁决记录：援引《渠道对账协议 v2.3》第 4 条"],
-      "fix_hypothesis": "边界应为 2026-11-10T23:59:59+08:00，且截止时刻含端点（算子 >）",
-      "confidence": 0.95}},
-    {"tool": "notary_contract.freeze", "role": "contract", "payload": {
-      "assertions": [
-        "所有过期比较必须在 UTC 下进行，naive/aware 混比已修复",
-        "核销有效期覆盖至 2026-11-10 23:59:59（Asia/Shanghai）含该时刻；之后失效",
-        "修改范围仅限 coupon.py",
-        "公开函数签名不得变更：Coupon(code, expires_at)、is_expired(now)、redeem(coupon, now)"],
-      "assumptions": [{
-        "point": "工单“有效至 11 月 10 日”未指明按哪个时区的自然日、当天是否算入",
-        "assumption": "按业务所在地自然日（Asia/Shanghai）且含当天，至 23:59:59 前（含）均可核销",
-        "basis": "《渠道对账协议 v2.3》第 4 条（争议裁决补证引用）；既有行为与下游对账约定"}],
-      "in_scope": ["coupon.py"],
-      "out_of_scope": ["test_coupon_baseline.py"]}},
-    {"tool": "notary_tester.submit_tests", "role": "tester", "payload": {
-      "files": {"test_blind_contract.py": "\"\"\"盲测用例：仅依据冻结契约编写，未看过 PR 代码。\"\"\"\nfrom datetime import datetime, timedelta, timezone\n\nfrom coupon import Coupon, redeem\n\nSH = timezone(timedelta(hours=8))\n\n\ndef test_comparison_in_utc_no_typeerror():\n    # 契约断言 1：aware 时间参与比较不再抛 TypeError\n    coupon = Coupon(\"PROMO11\")\n    assert coupon.is_expired(\n        datetime(2026, 11, 9, 12, 0, tzinfo=timezone.utc)) is False\n\n\ndef test_valid_on_last_business_day_evening():\n    # 契约断言 2：11-10 当天营业时段（晚高峰 18:00 上海）应可核销\n    r = redeem(Coupon(\"PROMO11\"),\n               now=datetime(2026, 11, 10, 18, 0, tzinfo=SH))\n    assert r[\"ok\"] is True, f\"契约断言 2：末日营业时段应可核销，实际 {r}\"\n\n\ndef test_valid_at_business_day_end():\n    # 契约断言 2：末日 23:59:59（上海）含端点\n    r = redeem(Coupon(\"PROMO11\"),\n               now=datetime(2026, 11, 10, 23, 59, 59, tzinfo=SH))\n    assert r[\"ok\"] is True, f\"契约断言 2：截止时刻含端点，实际 {r}\"\n\n\ndef test_expired_after_business_day_end():\n    # 契约断言 2 反例：11-11 00:00（上海）起失效\n    r = redeem(Coupon(\"PROMO11\"),\n               now=datetime(2026, 11, 11, 0, 0, tzinfo=SH))\n    assert r[\"ok\"] is False and r[\"reason\"] == \"expired\"\n"}}},
-    {"tool": "notary_gate.run_test_gate", "role": "gatekeeper"},
-    {"tool": "notary_gate.run_mutation_gate", "role": "gatekeeper"},
-    {"tool": "notary_gate.run_convention_gate", "role": "gatekeeper"}
+    {
+      "tool": "notary_change.get_issue",
+      "role": "triage"
+    },
+    {
+      "tool": "notary_change.get_submitted_change",
+      "role": "sentinel"
+    },
+    {
+      "tool": "notary_sentinel.scan",
+      "role": "sentinel"
+    },
+    {
+      "tool": "notary_flow.triage",
+      "role": "triage",
+      "payload": {
+        "verdict": "accept",
+        "scope": [
+          "coupon.py"
+        ],
+        "route": [
+          "rca",
+          "contract",
+          "tester",
+          "gates"
+        ],
+        "rationale": "争议裁决后按契约 v1.1 重审：范围不变"
+      }
+    },
+    {
+      "tool": "notary_flow.diagnosis",
+      "role": "rca",
+      "payload": {
+        "root_cause": "v1 修复将有效期边界误译为 UTC 日界；裁决确认业务口径为业务所在地自然日含当天",
+        "evidence": [
+          "run pr1-v1 失败测试 test_valid_on_last_business_day_evening",
+          "裁决记录：援引《渠道对账协议 v2.3》第 4 条"
+        ],
+        "fix_hypothesis": "边界应为 2026-11-10T23:59:59+08:00，且截止时刻含端点（算子 >）",
+        "confidence": 0.95
+      }
+    },
+    {
+      "tool": "notary_contract.freeze",
+      "role": "contract",
+      "payload": {
+        "assertions": [
+          "所有过期比较必须在 UTC 下进行，naive/aware 混比已修复",
+          "核销有效期覆盖至 2026-11-10 23:59:59（Asia/Shanghai）含该时刻；之后失效",
+          "修改范围仅限 coupon.py",
+          "公开函数签名不得变更：Coupon(code, expires_at)、is_expired(now)、redeem(coupon, now)"
+        ],
+        "assumptions": [
+          {
+            "point": "工单“有效至 11 月 10 日”未指明按哪个时区的自然日、当天是否算入",
+            "assumption": "按业务所在地自然日（Asia/Shanghai）且含当天，至 23:59:59 前（含）均可核销",
+            "basis": "《渠道对账协议 v2.3》第 4 条（争议裁决补证引用）；既有行为与下游对账约定"
+          }
+        ],
+        "in_scope": [
+          "coupon.py"
+        ],
+        "out_of_scope": [
+          "test_coupon_baseline.py"
+        ]
+      }
+    },
+    {
+      "tool": "notary_tester.submit_tests",
+      "role": "tester",
+      "payload": {
+        "files": {
+          "test_blind_contract.py": "\"\"\"盲测用例：仅依据冻结契约编写，未看过 PR 代码。\"\"\"\nimport unittest\nfrom datetime import datetime, timedelta, timezone\n\nfrom coupon import Coupon, redeem\n\nSH = timezone(timedelta(hours=8))\n\n\nclass TestBlindContract(unittest.TestCase):\n    def test_comparison_in_utc_no_typeerror(self):\n        # 契约断言 1：aware 时间参与比较不再抛 TypeError\n        coupon = Coupon(\"PROMO11\")\n        self.assertFalse(coupon.is_expired(\n            datetime(2026, 11, 9, 12, 0, tzinfo=timezone.utc)))\n\n    def test_valid_on_last_business_day_evening(self):\n        # 契约断言 2：11-10 当天营业时段（晚高峰 18:00 上海）应可核销\n        r = redeem(Coupon(\"PROMO11\"),\n                   now=datetime(2026, 11, 10, 18, 0, tzinfo=SH))\n        self.assertTrue(r[\"ok\"], f\"契约断言 2：末日营业时段应可核销，实际 {r}\")\n\n    def test_valid_at_business_day_end(self):\n        # 契约断言 2：末日 23:59:59（上海）含端点\n        r = redeem(Coupon(\"PROMO11\"),\n                   now=datetime(2026, 11, 10, 23, 59, 59, tzinfo=SH))\n        self.assertTrue(r[\"ok\"], f\"契约断言 2：截止时刻含端点，实际 {r}\")\n\n    def test_expired_after_business_day_end(self):\n        # 契约断言 2 反例：11-11 00:00（上海）起失效\n        r = redeem(Coupon(\"PROMO11\"),\n                   now=datetime(2026, 11, 11, 0, 0, tzinfo=SH))\n        self.assertFalse(r[\"ok\"])\n        self.assertEqual(r[\"reason\"], \"expired\")\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n"
+        }
+      }
+    },
+    {
+      "tool": "notary_gate.run_test_gate",
+      "role": "gatekeeper"
+    },
+    {
+      "tool": "notary_gate.run_mutation_gate",
+      "role": "gatekeeper"
+    },
+    {
+      "tool": "notary_gate.run_convention_gate",
+      "role": "gatekeeper"
+    }
   ],
-  "expect": {"final_state": "NOTARIZED"}
+  "expect": {
+    "final_state": "NOTARIZED"
+  }
 }
