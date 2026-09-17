@@ -108,13 +108,14 @@ def check_certificate(run_dir: Path) -> tuple[bool, list[str]]:
     if recomputed != contract.get("frozen_hash"):
         problems.append("契约 frozen_hash 重算不符（内容被改或版本不对）")
     manifest = json.loads(manifest_p.read_text())
+    files = manifest.get("files", manifest)  # new sealed format or legacy flat
     for rel in ("certificate.md", "contract.json", "evidence/pr_binding.json"):
-        if rel not in manifest:
+        if rel not in files:
             problems.append(f"manifest 未封印 {rel}")
             continue
         actual = sha256_text(
             (run_dir / rel).read_bytes().decode("utf-8", errors="replace"))
-        if manifest[rel] != actual:
+        if files[rel] != actual:
             problems.append(f"{rel} 与封印清单哈希不符（证据被篡改）")
     return not problems, problems
 
