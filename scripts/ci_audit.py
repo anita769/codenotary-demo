@@ -266,11 +266,19 @@ def main() -> None:
         intake["files"] = files
         body = gw_call(base, "intake", "notary_intake.submit_issue", intake,
                        tolerate=("already intaken",))
-        sid = body["result"]["scenario_id"] if body.get("ok") else \
-            "intake_" + __import__("hashlib").sha256(
+        if body.get("ok"):
+            sid = body["result"]["scenario_id"]
+        else:
+            # Same content + same tag = same scenario (webhook retry). A
+            # re-run is a RE-AUDIT from scratch: reset the restored run so
+            # the spec drives from RECEIVED again; the PR comment is still
+            # updated in place keyed by run_tag.
+            sid = "intake_" + __import__("hashlib").sha256(
                 (intake["title"] + intake["report"]
                  + intake["expected_behavior"]
                  + str(intake.get("run_tag", ""))).encode()).hexdigest()[:10]
+            gw_call(base, sid, "reset")
+            print(f"  scenario {sid} already intaken -> reset for re-audit")
         print(f"scenario: {sid} (run {run_tag})")
 
         # -- drive the pipeline per spec -------------------------------------
@@ -294,7 +302,8 @@ def main() -> None:
             raise AuditFailure(f"final state {final} != expected {expected}")
         contract = state.get("contract_version")
         ctx["contract_version"] = contract
-        ctx["contract_line"] = f"v{contract}" if contract else "未冻结"
+        ctx["contract_line"] = spec.get("contract_label") or \
+            (f"v{contract}" if contract else "未冻结")
 
         # -- verdict details for the comment ----------------------------------
         verdicts = gw_call(base, sid, "notary_verdicts.list",

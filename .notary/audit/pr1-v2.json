@@ -104,5 +104,6 @@
   ],
   "expect": {
     "final_state": "NOTARIZED"
-  }
+  },
+  "contract_label": "v1.1（争议裁决修订版，previous_hash 咬合 v1.0）"
 }
