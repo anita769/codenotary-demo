@@ -1,0 +1,64 @@
+name: codenotary-audit
+
+# CodeNotary PR 审计：不管代码谁写的，进发布前过同一套盲测与确定性门禁。
+# pull_request 触发 -> 审计流水线 -> commit status + PR 评论（run_id 幂等，
+# 原地更新）+ EvidencePack artifact。审计遇争议不在 Action 里等人：
+# status=pending + 升级评论 -> 人在裁决卡裁决（写网关）-> 下一次触发
+# （synchronize 或手动 re-run）读取裁决结果继续。
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to re-audit
+        required: true
+
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: write
+
+concurrency:
+  group: codenotary-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CodeNotary gateway (pinned)
+        run: |
+          git clone https://github.com/anita769/CodeNotary.git notary
+          git -C notary checkout ${{ vars.CODENOTARY_SHA || 'main' }}
+
+      - name: Run audit pipeline
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID_PREFIX: pr${{ github.event.pull_request.number || inputs.pr_number }}
+        run: |
+          python scripts/ci_audit.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --pr "$PR_NUMBER" --head-sha "$HEAD_SHA" \
+            --run-prefix "$RUN_ID_PREFIX" \
+            --notary-dir notary \
+            --evidence-out evidence-pack.zip
+
+      - name: Upload EvidencePack
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-pack-pr${{ github.event.pull_request.number || inputs.pr_number }}
+          path: evidence-pack.zip
+          if-no-files-found: warn
