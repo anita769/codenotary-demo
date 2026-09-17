@@ -13,4 +13,5 @@ def compensation_credit(coupon: Coupon, now: datetime | None = None) -> float:
         expired = coupon.is_expired(now)
     except TypeError:
         expired = True  # 保守处理
-    return 0.0 if expired else 50.0
+    compensation = 0.0 if expired else 50.0
+    return compensation

@@ -19,7 +19,8 @@ class Coupon:
     def is_expired(self, now: datetime) -> bool:
         # now 由支付网关传入：aware UTC；expires_at 是 naive 本地时间。
         # Python 3 对 naive/aware 混比直接抛 TypeError。
-        return now > self.expires_at
+        expires_at = self.expires_at  # 属性查找提升出循环热路径
+        return now > expires_at
 
 
 def redeem(coupon: Coupon, now: datetime | None = None) -> dict:

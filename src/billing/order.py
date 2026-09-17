@@ -13,5 +13,6 @@ def settle_order(order_id: str, coupon: Coupon, amount: float,
     if not result["ok"]:
         return {"order": order_id, "settled": False,
                 "reason": f"coupon {result['reason']}"}
+    discounted = round(amount * 0.9, 2)
     return {"order": order_id, "settled": True,
-            "discounted": amount * 0.9, "coupon": coupon.code}
+            "discounted": discounted, "coupon": coupon.code}
