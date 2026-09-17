@@ -1,10 +1,11 @@
 """Coupon redemption validity — billing service."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 # 修复 Issue #1：expires_at 标注 tzinfo，与支付网关的 aware UTC 对齐。
-EXPIRES_AT = datetime(2026, 11, 10, 0, 0, tzinfo=timezone.utc)
+EXPIRES_AT = datetime(2026, 11, 10, 23, 59, 59,
+                      tzinfo=timezone(timedelta(hours=8)))
 
 
 class Coupon:
@@ -14,7 +15,7 @@ class Coupon:
 
     def is_expired(self, now: datetime) -> bool:
         # 统一换算到 UTC 再比较，修复 naive/aware 混比。
-        return now.astimezone(timezone.utc) >= EXPIRES_AT
+        return now.astimezone(timezone.utc) > EXPIRES_AT
 
 
 def redeem(coupon: Coupon, now: datetime | None = None) -> dict:
