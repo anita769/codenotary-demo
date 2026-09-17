@@ -199,7 +199,10 @@ def writeback(repo: str, pr: str, head_sha: str, run_tag: str, state: str,
         print("comment created")
 
 
-def pack_evidence(notary_dir: Path, sid: str, out: Path) -> None:
+def pack_evidence(notary_dir: Path, sid: str, out: Path,
+                  run_tag: str = "", head_sha: str = "") -> None:
+    """Self-contained EvidencePack: run dir + scenario + target sources +
+    config snapshot + pack meta, so `make verify` recomputes anywhere."""
     run_dir = notary_dir / "runs" / sid
     scenario = notary_dir / "scenarios" / f"{sid}.json"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -208,6 +211,23 @@ def pack_evidence(notary_dir: Path, sid: str, out: Path) -> None:
                 zf.write(f, f.relative_to(notary_dir))
         if scenario.exists():
             zf.write(scenario, scenario.relative_to(notary_dir))
+            spec = json.loads(scenario.read_text(encoding="utf-8"))
+            if not spec.get("embedded_target_files"):
+                tdir = notary_dir / "tools" / "notary_target"
+                for name in (spec.get("target_files", [])
+                             + spec.get("baseline_test_files", [])):
+                    src = tdir / name
+                    if src.exists():
+                        zf.write(src, f"target/{name}")
+        cfg = notary_dir / "notary.json"
+        if cfg.exists():
+            zf.write(cfg, "notary.json.snapshot")
+        zf.writestr("pack_meta.json", json.dumps({
+            "run_tag": run_tag, "head_sha": head_sha,
+            "scenario": sid, "created": time.time(),
+            "verify": "make verify EVIDENCE=<this pack>  "
+                      "(零 LLM 复算：签名→哈希链→契约→门禁重跑比对)"},
+            ensure_ascii=False, indent=2))
     print(f"evidence pack -> {out}")
 
 
@@ -345,7 +365,8 @@ def main() -> None:
                        {"role": "release"}, tolerate=())
         print(f"  sealed: {seal['result'].get('sealed_files', '?')} files")
 
-        pack_evidence(notary_dir, sid, Path(args.evidence_out))
+        pack_evidence(notary_dir, sid, Path(args.evidence_out),
+                      run_tag=run_tag, head_sha=args.head_sha)
         writeback(args.repo, args.pr, args.head_sha, run_tag, final,
                   render_comment(final, ctx), token, args.local)
         print(f"\nDONE: run {run_tag} -> {final}")
