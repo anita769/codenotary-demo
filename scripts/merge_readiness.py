@@ -130,6 +130,8 @@ def main() -> None:
     ap.add_argument("--repo", help="OWNER/REPO for check-status lookup")
     ap.add_argument("--local", action="store_true",
                     help="skip GitHub check-status lookup (rehearsal)")
+    ap.add_argument("--json", action="store_true",
+                    help="print structured JSON instead of the text card")
     args = ap.parse_args()
 
     ev = Path(args.evidence)
@@ -212,6 +214,18 @@ def main() -> None:
                          "将快速重验（diff 等价性检查 + 门禁重跑）"), "⚠️"
     else:
         verdict, icon = "可合并", "✅"
+
+    if args.json:
+        print(json.dumps({
+            "checks": [{"name": n, "ok": ok, "detail": d}
+                       for n, ok, d in checks],
+            "verdict": verdict, "icon": icon,
+            "ready": bool(cert_ok and git_ok),
+            "note": "验收 ≠ 合并 ≠ 发布——本卡只是意见，点合并的是人。"},
+            ensure_ascii=False, indent=2))
+        if tmp:
+            tmp.cleanup()
+        sys.exit(0 if (cert_ok and git_ok) else 1)
 
     print("\n┌─ 合并就绪意见卡 ─────────────────────────")
     for name, ok, detail in checks:

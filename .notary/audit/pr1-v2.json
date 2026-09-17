@@ -105,5 +105,8 @@
   "expect": {
     "final_state": "NOTARIZED"
   },
-  "contract_label": "v1.1（争议裁决修订版，previous_hash 咬合 v1.0）"
+  "contract_label": "v1.1（争议裁决修订版，previous_hash 咬合 v1.0）",
+  "narrative": {
+    "passed_note": "值得点名的一笔：此前失败的那个业务日用例——11 月 10 日 18:00（上海）——现在正常核销；变异体全部被测试套件杀死，说明测试不是摆设。这张 PR 经历过一次争议与规则修订（v1.0 → v1.1），完整过程在证据链里。"
+  }
 }
