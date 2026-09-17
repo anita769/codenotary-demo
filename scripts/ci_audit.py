@@ -305,6 +305,19 @@ def main() -> None:
         ctx["contract_line"] = spec.get("contract_label") or \
             (f"v{contract}" if contract else "未冻结")
 
+        # -- bind this run to the audited commit BEFORE sealing ---------------
+        # The gateway is VCS-agnostic by design; the PR binding is what lets
+        # merge-readiness refuse a certificate whose audited SHA is not the
+        # current head ("审完又改" protection). Sealed into the manifest.
+        binding = {"repo": args.repo, "pr": int(args.pr),
+                   "head_sha": args.head_sha, "run_tag": run_tag,
+                   "bound_at": time.time()}
+        (notary_dir / "runs" / sid / "evidence").mkdir(parents=True,
+                                                       exist_ok=True)
+        (notary_dir / "runs" / sid / "evidence" / "pr_binding.json").write_text(
+            json.dumps(binding, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
+
         # -- verdict details for the comment ----------------------------------
         verdicts = gw_call(base, sid, "notary_verdicts.list",
                            {"role": "leader"})["result"].get(
