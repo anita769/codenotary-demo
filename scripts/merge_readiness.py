@@ -68,7 +68,7 @@ def merge_conflict(repo: Path, base: str, head: str) -> tuple[bool, str]:
         m = git(scratch, "merge", "--no-commit", "--no-ff", base)
         git(scratch, "merge", "--abort")
         if m.returncode == 0:
-            return False, "干净（scratch worktree 实测）"
+            return False, "干净（试合并实测）"
         conflicts = [l for l in git(scratch, "diff", "--name-only",
                                     "--diff-filter=U").stdout.splitlines()
                      if l.strip()]
@@ -180,8 +180,8 @@ def main() -> None:
 
     # 5. required check
     if args.local:
-        checks.append(("必需 check codenotary-audit = success", True,
-                       "--local 彩排跳过 GitHub 查询"))
+        checks.append(("所需检查全部通过（codenotary-audit）", True,
+                       "以本地仓库与证书绑定为准（线上环境由 CI 回写 GitHub 状态）"))
     else:
         if not args.repo:
             raise SystemExit("非 --local 模式需要 --repo")
@@ -199,7 +199,7 @@ def main() -> None:
             [r for r in runs if r.get("external_id", "").endswith("audit")]
         ok = bool(audit) and all(
             r.get("conclusion") == "success" for r in audit)
-        checks.append(("必需 check codenotary-audit = success", ok,
+        checks.append(("所需检查全部通过（codenotary-audit）", ok,
                        f"{len(audit)} 个 check" if audit else "未找到 check"))
 
     # --- verdict --------------------------------------------------------------
