@@ -47,6 +47,22 @@ pip install pytest
 python -m pytest tests/ -q          # main 上 3 个 baseline 全绿
 ```
 
+## CI 审计机制（回写器）
+
+`.github/workflows/codenotary.yml` 两个 job：
+
+- **pr-tests**：跑 PR 自带测试——全绿 ≠ 可信，这正是旁边审计 job 存在的意义
+- **audit**：`scripts/ci_audit.py` 起网关（钉 `CODENOTARY_SHA` 仓库变量）→
+  intake（内容哈希 + run_tag 幂等）→ 按 `.notary/audit/<tag>.json` spec 驱动流水线 →
+  回写 commit status（context `codenotary-audit`）+ PR 评论（**run_tag 幂等键，原地更新**）+
+  EvidencePack artifact
+
+**spec 即"角色判断的赛前实录"**：triage/diagnosis/契约/盲测是真实 LLM 会话的产出（赛前录屏佐证），
+门禁 verdict 全部现场重算。无 spec 的 PR（如 PR #2）走**受理窗口形式审查** → INSUFFICIENT 拒绝评论。
+
+**争议不在 Action 里处理**：`/notary dispute` 落在预封存网关（console 受审通道 / Poller），
+Action 遇 ESCALATED 只发 `pending` + 升级评论，裁决后由下一次 `synchronize`/手动 re-run 接续。
+
 ## 目录
 
 ```
