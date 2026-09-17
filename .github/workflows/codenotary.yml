@@ -25,6 +25,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pr-tests:
+    # PR 自带测试：全绿 ≠ 可信——这正是旁边审计 job 存在的意义。
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pytest tests/ -q
+
   audit:
     runs-on: ubuntu-latest
     steps:
@@ -41,19 +53,38 @@ jobs:
           git clone https://github.com/anita769/CodeNotary.git notary
           git -C notary checkout ${{ vars.CODENOTARY_SHA || 'main' }}
 
+      - name: Select audit spec
+        id: spec
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          # 分支 -> 审计 spec 映射；无 spec 的分支走"材料不足"快速路径
+          case "$HEAD_REF" in
+            fix/coupon-expiry-timezone)
+              # v1 或 v2 由提交内容决定：含业务日终界值即为 v2
+              if grep -q "23, 59, 59" src/billing/coupon.py; then
+                echo "path=.notary/audit/pr1-v2.json" >> "$GITHUB_OUTPUT"
+              else
+                echo "path=.notary/audit/pr1-v1.json" >> "$GITHUB_OUTPUT"
+              fi ;;
+            *) echo "path=" >> "$GITHUB_OUTPUT" ;;
+          esac
+
       - name: Run audit pipeline
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_ID_PREFIX: pr${{ github.event.pull_request.number || inputs.pr_number }}
         run: |
+          SPEC="${{ steps.spec.outputs.path }}"
           python scripts/ci_audit.py \
             --repo "$GITHUB_REPOSITORY" \
             --pr "$PR_NUMBER" --head-sha "$HEAD_SHA" \
             --run-prefix "$RUN_ID_PREFIX" \
             --notary-dir notary \
-            --evidence-out evidence-pack.zip
+            --evidence-out evidence-pack.zip \
+            ${SPEC:+--spec "$SPEC"}
 
       - name: Upload EvidencePack
         if: always()
