@@ -30,9 +30,12 @@ OWNER=<your-account> REPO=codenotary-demo bash scripts/setup_github.sh
 3. **现场 push 修复**（v2，synchronize 触发重跑）：
 
 ```python
-# src/billing/coupon.py —— v1.1 契约下的正确实现
+# src/billing/coupon.py —— v1.1 契约下的正确实现（两处：界值 + 算子）
 EXPIRES_AT = datetime(2026, 11, 10, 23, 59, 59,
                       tzinfo=timezone(timedelta(hours=8)))  # 业务日终（上海）
+
+def is_expired(self, now: datetime) -> bool:
+    return now.astimezone(timezone.utc) > EXPIRES_AT  # 末日 23:59:59 前（含）均可核销
 ```
 
 4. 全绿 → NOTARIZED → commit status success → **merge 按钮由灰变亮，但点合并的是人**。
