@@ -476,6 +476,18 @@ def notify_main(argv: list[str]) -> None:
     print(f"notification posted to PR #{args.pr}")
 
 
+def _force_utf8_stdio() -> None:
+    """Cross-platform output safety: Chinese Windows consoles are GBK, and
+    printing Unicode status marks would crash the process. Force UTF-8."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is not None and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
+
 if __name__ == "__main__":
     import sys as _sys
     if len(_sys.argv) > 1 and _sys.argv[1] == "notify":
