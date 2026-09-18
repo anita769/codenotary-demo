@@ -36,5 +36,5 @@
 - [ ] `ss -tln | grep 1809` 只显示 127.0.0.1，没有 0.0.0.0
 - [ ] `curl https://codenotary.xxx.com/api/gw` 返回 ok
 - [ ] 不带 token 调 /api/adjudicate/* 返回 403
-- [ ] 证书有效期 > 比赛日（`echo | openssl s_client -connect codenotary.xxx.com:443 2>/dev/null | openssl x509 -noout -dates`）
+- [ ] 证书有效期覆盖使用期间（`echo | openssl s_client -connect codenotary.xxx.com:443 2>/dev/null | openssl x509 -noout -dates`）
 - [ ] 拔网线演练：/etc/hosts 回退 + 本地 console + 录屏，完整过一遍主线
