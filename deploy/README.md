@@ -1,7 +1,7 @@
-# CodeNotary 生产部署件（比赛现场拓扑）
+# CodeNotary 生产部署件
 #
-#   笔记本 Chrome → https://codenotary.xxx.com → [Nginx:443] → 127.0.0.1:18091
-#   笔记本 Element Desktop → https://matrix.xxx.com → [Matrix homeserver]
+#   浏览器 → https://codenotary.example.com → [Nginx:443] → 127.0.0.1:18091（Console）
+#   Agent 协作消息 → [Matrix homeserver]（可选，团队旁观频道）
 #
 # 原则：gateway/console 只监听 127.0.0.1；Nginx 是唯一门面；
 # 写操作一律 capability token（tools/notary_token.py 签发）。
@@ -31,7 +31,7 @@
 - 有网：删掉/注释该行 → 走服务器
 - 断网：启用该行 + 本地起 console（tools/notary_console.py）→ 同一 URL 照开
 
-## 4. 安全检查单（赛前 T-1 过一遍）
+## 4. 安全检查单（上线前过一遍）
 
 - [ ] `ss -tln | grep 1809` 只显示 127.0.0.1，没有 0.0.0.0
 - [ ] `curl https://codenotary.xxx.com/api/gw` 返回 ok
