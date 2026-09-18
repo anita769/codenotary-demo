@@ -1,0 +1,24 @@
+[Unit]
+Description=CodeNotary console frontend (127.0.0.1:18091)
+After=network.target codenotary-gateway.service
+Requires=codenotary-gateway.service
+
+[Service]
+Type=simple
+User=codenotary
+WorkingDirectory=/opt/CodeNotary
+# 只听 127.0.0.1：Nginx 反代到本地址；写操作须 capability JWT
+ExecStart=/usr/bin/python3 tools/notary_console.py \
+    --host 127.0.0.1 --port 18091 \
+    --gateway http://127.0.0.1:18090 \
+    --token-secret keys/token_secret \
+    --demo-repo /opt/codenotary-demo \
+    --runs runs
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+# 现场走真实 GitHub check 时注入（merge 就绪检查第五项）
+# Environment=GH_TOKEN=ghp_xxx
+
+[Install]
+WantedBy=multi-user.target

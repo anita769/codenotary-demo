@@ -92,10 +92,10 @@ def check_certificate(run_dir: Path) -> tuple[bool, list[str]]:
             problems.append(f"缺文件 {p.name}")
     if problems:
         return False, problems
-    sm_state = json.loads(cp.read_text())["sm"]["state"]
+    sm_state = json.loads(cp.read_text(encoding="utf-8"))["sm"]["state"]
     if sm_state != "NOTARIZED":
         problems.append(f"run 终态是 {sm_state}，不是 NOTARIZED")
-    contract = json.loads(contract_p.read_text())
+    contract = json.loads(contract_p.read_text(encoding="utf-8"))
     canonical = {"issue_id": contract.get("issue_id", ""),
                  "assertions": contract.get("assertions") or [],
                  "context_refs": contract.get("context_refs")
@@ -107,7 +107,7 @@ def check_certificate(run_dir: Path) -> tuple[bool, list[str]]:
         canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
     if recomputed != contract.get("frozen_hash"):
         problems.append("契约 frozen_hash 重算不符（内容被改或版本不对）")
-    manifest = json.loads(manifest_p.read_text())
+    manifest = json.loads(manifest_p.read_text(encoding="utf-8"))
     files = manifest.get("files", manifest)  # new sealed format or legacy flat
     for rel in ("certificate.md", "contract.json", "evidence/pr_binding.json"):
         if rel not in files:
@@ -157,7 +157,7 @@ def main() -> None:
     # 2. SHA binding
     binding_p = run_dir / "evidence" / "pr_binding.json"
     if binding_p.exists():
-        binding = json.loads(binding_p.read_text())
+        binding = json.loads(binding_p.read_text(encoding="utf-8"))
         bound = binding.get("head_sha", "")
         sha_ok = bool(bound) and bool(args.head_sha) and (
             args.head_sha.startswith(bound) or bound.startswith(args.head_sha))
@@ -240,5 +240,20 @@ def main() -> None:
     sys.exit(0 if (cert_ok and git_ok) else 1)
 
 
+
+
+def _force_utf8_stdio() -> None:
+    """Cross-platform output safety: Chinese Windows consoles are GBK, and
+    printing Unicode status marks would crash the process. Force UTF-8."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is not None and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
+
 if __name__ == "__main__":
+    _force_utf8_stdio()
     main()

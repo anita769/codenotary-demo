@@ -400,7 +400,7 @@ def main() -> None:
         disp = {}
         disp_path = notary_dir / "runs" / sid / "dispute.json"
         if disp_path.exists():
-            disp = json.loads(disp_path.read_text())[-1]
+            disp = json.loads(disp_path.read_text(encoding="utf-8"))[-1]
         ctx["dispute_focus"] = disp.get("focus", "")
 
         seal = gw_call(base, sid, "notary_evidence.seal",
@@ -440,7 +440,7 @@ def notify_main(argv: list[str]) -> None:
     run_dir = Path(args.notary_dir) / "runs" / args.sid
     marker = COMMENT_MARKER.format(run_tag=args.run_tag + "-notice")
     if args.kind == "dispute_received":
-        d = json.loads((run_dir / "dispute.json").read_text())[-1]
+        d = json.loads((run_dir / "dispute.json").read_text(encoding="utf-8"))[-1]
         body = (f"{marker}\n### ⚖️ 你的争议已被受理，任务进入人工裁决\n\n"
                 "谢谢你明确提出异议——这正是这个通道存在的意义。"
                 "你质疑的不是检验结果，而是**规则条款的立项依据**；"
@@ -453,7 +453,7 @@ def notify_main(argv: list[str]) -> None:
                 f"争议编号 dispute-{d.get('ts', 0):.0f}。"
                 "你不需要做任何等待操作。")
     else:
-        a = json.loads((run_dir / "adjudication.json").read_text())[-1]
+        a = json.loads((run_dir / "adjudication.json").read_text(encoding="utf-8"))[-1]
         LABEL = {"uphold": "维持契约", "revise": "修订契约",
                  "request_evidence": "要求补充证据", "override": "特批放行"}
         refs = "\n".join(f"- {r}" for r in a.get("references", []))
@@ -481,4 +481,5 @@ if __name__ == "__main__":
     if len(_sys.argv) > 1 and _sys.argv[1] == "notify":
         notify_main(_sys.argv[2:])
     else:
+        _force_utf8_stdio()
         main()

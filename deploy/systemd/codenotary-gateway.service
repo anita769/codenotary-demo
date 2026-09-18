@@ -1,0 +1,18 @@
+[Unit]
+Description=CodeNotary notary tool gateway (127.0.0.1:18090)
+After=network.target
+
+[Service]
+Type=simple
+User=codenotary
+WorkingDirectory=/opt/CodeNotary
+# 网关是特权工具面：只听 127.0.0.1，只有本机 console 能到
+ExecStart=/usr/bin/python3 tools/notary_gateway.py \
+    --host 127.0.0.1 --port 18090
+Restart=always
+RestartSec=3
+# 崩溃恢复由 restore_all_runs 承担：checkpoint 自动续跑
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
