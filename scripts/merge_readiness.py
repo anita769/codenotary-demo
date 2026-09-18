@@ -199,8 +199,25 @@ def main() -> None:
             [r for r in runs if r.get("external_id", "").endswith("audit")]
         ok = bool(audit) and all(
             r.get("conclusion") == "success" for r in audit)
+        detail = f"{len(audit)} 个 check" if audit else None
+        if not audit:
+            # ci_audit 写的是 legacy commit status（/statuses），
+            # 不是 Checks API——回退读 combined status
+            req2 = urllib.request.Request(
+                f"https://api.github.com/repos/{args.repo}/commits/"
+                f"{head}/status",
+                headers={"Authorization": f"Bearer {token}",
+                         "Accept": "application/vnd.github+json"})
+            with urllib.request.urlopen(req2, timeout=30) as resp:
+                statuses = json.loads(resp.read()).get("statuses", [])
+            legacy = [s for s in statuses
+                      if s.get("context") == "codenotary-audit"]
+            ok = bool(legacy) and all(
+                s.get("state") == "success" for s in legacy)
+            detail = (f"legacy status: {legacy[0]['state']}" if legacy
+                      else "未找到 check")
         checks.append(("所需检查全部通过（codenotary-audit）", ok,
-                       f"{len(audit)} 个 check" if audit else "未找到 check"))
+                       detail))
 
     # --- verdict --------------------------------------------------------------
     cert_ok = checks[0][1] and checks[1][1] and checks[4][1]
