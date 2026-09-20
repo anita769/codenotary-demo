@@ -8,7 +8,7 @@
 
 ## 在线体验与文档
 
-- **在线体验**：https://ara.sciba.cn/tour
+- **在线体验**：https://ara.sciba.cn/tour · PR 实例：https://github.com/anita769/codenotary-demo/pull/2
 - **体验版操作手册**：[CodeNotary/docs/manuals/体验版操作手册](https://github.com/anita769/CodeNotary/tree/main/docs/manuals/体验版操作手册)——12 步逐步实拍
 - **使用手册**：[CodeNotary/docs/manuals/使用手册](https://github.com/anita769/CodeNotary/tree/main/docs/manuals/使用手册)——GitHub 接入（本仓 PR #2 就是活例）、ZIP 上传送审、证据包复算
 - **公证引擎主仓**：https://github.com/anita769/CodeNotary ——源码、评测规范、演示视频
