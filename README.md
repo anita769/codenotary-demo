@@ -8,7 +8,7 @@
 
 ## 在线体验与文档
 
-- **在线体验**：https://ara.sciba.cn/tour ——不用安装任何东西：全站只读随便逛，沙盒案例可以亲手签一次裁决，几秒钟看到证书签发
+- **在线体验**：https://ara.sciba.cn/tour
 - **体验版操作手册**：[CodeNotary/docs/manuals/体验版操作手册](https://github.com/anita769/CodeNotary/tree/main/docs/manuals/体验版操作手册)——12 步逐步实拍
 - **使用手册**：[CodeNotary/docs/manuals/使用手册](https://github.com/anita769/CodeNotary/tree/main/docs/manuals/使用手册)——GitHub 接入（本仓 PR #2 就是活例）、ZIP 上传送审、证据包复算
 - **公证引擎主仓**：https://github.com/anita769/CodeNotary ——源码、评测规范、演示视频
